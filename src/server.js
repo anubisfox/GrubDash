@@ -1,4 +1,5 @@
 const { PORT = 5000 } = process.env;
+const knex = require("./db/connection");
 
 const path = require("path");
 const app = require(path.resolve(

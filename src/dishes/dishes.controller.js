@@ -1,4 +1,5 @@
 const path = require("path");
+const dishesService = require("./dishes.service");
 
 // Use the existing dishes data
 const dishes = require(path.resolve("src/data/dishes-data"));
@@ -70,44 +71,32 @@ function validateDishId(request, response, next) {
     });
 };
 
-// Middleware
+// Routes
 
-function list(req, res) {
-    res.json({ data: dishes });
+async function list(req, res) {
+    const data = await dishesService.list();
+    res.json({ data });
 }
 
-function create(req, res) {
-    const { data: { name, description, price, image_url } = {} } = req.body;
-    const newDish = {
-        id: nextId(),
-        name: name,
-        description: description,
-        price: price,
-        image_url: image_url,
-    };
-    dishes.push(newDish);
-    res.status(201).json({ data: newDish })
+async function read(req, res) {
+    const data = await dishesService(res.locals.foundDish);
+    res.json({ data });
 }
 
-function read(req, res) {
-    res.json({ data: res.locals.dish });
+async function create(req, res) {
+    const data = await dishesService.create(res.locals.newDish);
+    res.status(201).json({ data });
 }
 
-function update(req, res) {
-    const { data: { name, description, price, image_url } = {} } = req.body;
-    res.locals.dish = {
-        id: res.locals.dishId,
-        name: name,
-        description: description,
-        price: price,
-        image_url: image_url,
-    };
-    res.json({ data: res.locals.dish });
+async function update(req, res) {
+    const { dishId } = req.params;
+    const data = await dishesService.update(req.body.data, Number(dishId));
+    res.json({ data });
 }
 
 module.exports = {
     list,
-    create: [validateDishBody, create],
     read: [validateDishExists, read],
+    create: [validateDishBody, create],
     update: [validateDishExists, validateDishBody, validateDishId, update],
 }

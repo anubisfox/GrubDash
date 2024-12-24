@@ -1,4 +1,5 @@
 const path = require("path");
+const ordersService = require("./orders.service");
 
 // Use the existing order data
 const orders = require(path.resolve("src/data/orders-data"));
@@ -92,58 +93,49 @@ function validateStatusCheck(req, res, next) {
     next();
 }
 
-// Middleware
+// Routes
 
-function list(req, res) {
-    res.json({ data: orders });
+async function list(req, res) {
+    const data = await ordersService.list();
+    res.json({ data });
 }
 
-function create(req, res) {
-    const { data: { deliverTo, mobileNumber, status, dishes} = {} } = req.body;
-    const newOrder = {
-        id: nextId(),
-        deliverTo: deliverTo,
-        mobileNumber: mobileNumber,
-        status: status,
-        dishes: dishes,
-    };
-    orders.push(newOrder);
-    res.status(201).json({ data: newOrder });
+async function read(req, res) {
+    const data = await ordersService(res.locals.foundOrder);
+    res.json({ data });
 }
 
-function read(req, res) {
-    res.json({ data: res.locals.order });
+async function create(req, res) {
+    const data = await ordersService.create(req.body.data);
+    res.status(201).json({ data });
 }
 
-function update(req, res) {
-    const { orderId } = req.params;
+async function update(req, res) {
+    const foundOrder = req.locals.foundOrder;
     const { data: { deliverTo, mobileNumber, dishes, status } = {} } = req.body;
 
     // Update the existing order with new values
-    const updatedOrder = {
-        ...res.locals.order,
-        deliverTo,
-        mobileNumber,
-        dishes,
-        status,
-        id: orderId, // Ensure id matches the route's :orderId
-    };
+    foundOrder.deliverTo = deliverTo;
+    foundOrder.mobileNumber = mobileNumber;
+    foundOrder.dishes = dishes;
+    foundOrder.status = status;
 
-    Object.assign(res.locals.order, updatedOrder); // Update the order in memory
+    const data = await ordersService.update(foundOrder);
 
-    res.json({ data: updatedOrder });
+    res.json({ data });
 }
 
-function destroy( req, res) {
-    const index = orders.indexOf(res.locals.order);
-    orders.splice(index, 1);
+async function destroy( req, res) {
+    const { orderId } = req.params;
+
+    await ordersService.destroy(Number(orderId));
     res.sendStatus(204);
 }
 
 module.exports = {
     list,
-    create: [validateOrderBody, create],
     read: [validateOrderExists, read],
+    create: [validateOrderBody, create],
     update: [validateOrderExists, validateOrderBody, validateStatusCheck, update],
     delete: [validateOrderExists, validateDestroyCheck, destroy],
 }
